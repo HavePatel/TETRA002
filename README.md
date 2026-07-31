@@ -1,1 +1,1 @@
-# TETRA002
+# TETRA002 (hackathon project)
