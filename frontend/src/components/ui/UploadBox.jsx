@@ -1,210 +1,212 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, CheckCircle, X, ShieldAlert, Sparkles, Cpu, RefreshCw, FileCheck } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  UploadCloud, X, CheckCircle2, RefreshCw, Sparkles,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from './Button';
 
-export default function UploadBox({ onUploadSuccess }) {
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [scanStage, setScanStage] = useState(''); // 'ocr' | 'gst' | 'ai' | 'done'
+const STAGES = [
+  { key: 'ocr', label: 'PaddleOCR Extraction', pct: 33  },
+  { key: 'gst', label: 'GSTIN Validation',      pct: 66  },
+  { key: 'ai',  label: 'Gemini AI Scoring',     pct: 100 },
+];
 
-  const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
-      setSelectedFile(file);
-      setScanStage('');
-      toast.success(`Loaded document: ${file.name}`);
-    }
+export default function UploadBox({ onUploadSuccess }) {
+  const [file,     setFile]     = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [stage,    setStage]    = useState(null); // null | 'ocr' | 'gst' | 'ai' | 'done'
+
+  const onDrop = useCallback((accepted, rejected) => {
+    if (rejected.length) { toast.error('Invalid file. Accepted: PDF, PNG, JPG.'); return; }
+    if (accepted.length) { setFile(accepted[0]); setStage(null); toast.success(`File loaded: ${accepted[0].name}`); }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/png': ['.png'],
-      'image/jpeg': ['.jpg', '.jpeg']
-    },
-    maxFiles: 1
+    accept: { 'application/pdf': ['.pdf'], 'image/png': ['.png'], 'image/jpeg': ['.jpg', '.jpeg'] },
+    maxFiles: 1,
+    maxSize: 10 * 1024 * 1024,
   });
 
-  const handleSimulateScan = () => {
-    if (!selectedFile) {
-      toast.error("Please drop or select an invoice PDF or image first.");
-      return;
-    }
+  const handleAnalyze = () => {
+    if (!file) { toast.error('Please select an invoice document first.'); return; }
+    setScanning(true);
+    setStage('ocr');
+    toast.loading('Stage 1 / 3 — PaddleOCR extraction…', { id: 'scan' });
 
-    setIsAnalyzing(true);
-    setScanStage('ocr');
-    toast.loading("Stage 1/3: PaddleOCR Text Extraction & Coordinate Mapping...", { id: "scan" });
-
+    setTimeout(() => { setStage('gst'); toast.loading('Stage 2 / 3 — GSTIN validation…', { id: 'scan' }); }, 1100);
+    setTimeout(() => { setStage('ai');  toast.loading('Stage 3 / 3 — Gemini AI scoring…', { id: 'scan' }); }, 2200);
     setTimeout(() => {
-      setScanStage('gst');
-      toast.loading("Stage 2/3: Validating GSTIN & Tax Subtotal Reconciliation...", { id: "scan" });
-    }, 1000);
-
-    setTimeout(() => {
-      setScanStage('ai');
-      toast.loading("Stage 3/3: Gemini AI Neural Risk Scoring & Anomaly Rationale...", { id: "scan" });
-    }, 2000);
-
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      setScanStage('done');
-      toast.success("Invoice Risk Intelligence Analysis Complete!", { id: "scan" });
-      if (onUploadSuccess) {
-        onUploadSuccess(selectedFile);
-      }
-    }, 3000);
+      setScanning(false); setStage('done');
+      toast.success('Analysis complete!', { id: 'scan' });
+      onUploadSuccess?.(file);
+    }, 3400);
   };
 
-  const handleRemoveFile = (e) => {
-    e.stopPropagation();
-    setSelectedFile(null);
-    setScanStage('');
-  };
+  const pct = STAGES.find(s => s.key === stage)?.pct ?? (stage === 'done' ? 100 : 0);
 
   return (
-    <div className="glass-panel rounded-3xl p-6 sm:p-8 shadow-glass space-y-6 border border-white/10">
-      <div
+    <div className="space-y-6">
+      {/* ── Drop Zone ── */}
+      <motion.div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-2xl p-8 sm:p-14 text-center cursor-pointer transition-all duration-300 relative overflow-hidden ${
-          isDragActive
-            ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01] shadow-glow-indigo'
-            : selectedFile
-            ? 'border-emerald-500/50 bg-emerald-500/5'
-            : 'border-slate-800 hover:border-indigo-500/50 hover:bg-cosmic-900/60 bg-cosmic-950/60'
-        }`}
+        className={`
+          border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center cursor-pointer
+          transition-all duration-300 relative overflow-hidden backdrop-blur-xl
+          ${isDragActive
+            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 scale-[1.01] shadow-md'
+            : file
+              ? 'border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-500/5'
+              : 'border-slate-300 dark:border-white/[0.1] bg-white/80 dark:bg-white/[0.02] hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/[0.04]'
+          }
+        `}
+        whileHover={{ scale: isDragActive || file ? 1 : 1.008 }}
       >
         <input {...getInputProps()} />
 
         <AnimatePresence mode="wait">
-          {selectedFile ? (
-            <motion.div 
+          {file ? (
+            <motion.div
               key="file"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="flex flex-col items-center"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              className="flex flex-col items-center gap-4"
             >
-              <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 shadow-glow-emerald">
-                <FileCheck className="w-10 h-10" />
-              </div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-lg font-extrabold text-slate-100 font-mono">{selectedFile.name}</h4>
-                <button
+              <motion.div 
+                className="w-20 h-20 rounded-2xl bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shadow-sm"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+              </motion.div>
+              <div className="flex items-center gap-2.5">
+                <p className="font-bold text-slate-900 dark:text-gray-100 font-mono text-sm tracking-tight">{file.name}</p>
+                <motion.button
                   type="button"
-                  onClick={handleRemoveFile}
-                  className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  onClick={e => { e.stopPropagation(); setFile(null); setStage(null); }}
+                  className="p-1.5 rounded-xl text-slate-400 dark:text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/15 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                 >
                   <X className="w-4 h-4" />
-                </button>
+                </motion.button>
               </div>
-              <p className="text-xs text-slate-400 mt-1 font-mono">
-                {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type || 'Invoice Document'}
+              <p className="text-xs text-slate-500 dark:text-gray-400 font-mono">
+                {(file.size / 1024).toFixed(1)} KB · {file.type || 'document'}
               </p>
-              <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-glow-emerald">
-                <CheckCircle className="w-4 h-4" />
-                Document Ready for OCR & Anomaly Radar Scan
-              </div>
+              <motion.span 
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25 shadow-sm"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Ready for analysis
+              </motion.span>
             </motion.div>
           ) : (
-            <motion.div 
-              key="drop"
+            <motion.div
+              key="idle"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center"
+              className="flex flex-col items-center gap-5"
             >
-              <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform shadow-glow-indigo">
-                <Upload className="w-10 h-10" />
+              <motion.div 
+                className={`w-20 h-20 rounded-2xl border flex items-center justify-center transition-all ${isDragActive ? 'bg-indigo-100 border-indigo-500 dark:bg-indigo-500/20 dark:border-indigo-400 shadow-md' : 'bg-slate-100/80 dark:bg-white/[0.03] border-slate-200 dark:border-white/[0.1]'}`}
+                animate={{ y: isDragActive ? -4 : 0, scale: isDragActive ? 1.08 : 1 }}
+              >
+                <UploadCloud className={`w-10 h-10 ${isDragActive ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-400 dark:text-gray-400'}`} />
+              </motion.div>
+              <div className="space-y-1.5">
+                <p className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                  {isDragActive ? 'Drop invoice document here...' : 'Drag & Drop Invoice Document'}
+                </p>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400 font-normal">or click to browse your local filesystem</p>
               </div>
-              <h3 className="text-xl font-extrabold text-slate-100 tracking-tight">
-                {isDragActive ? "Drop invoice document here..." : "Drag & drop invoice document here"}
-              </h3>
-              <p className="text-xs text-slate-400 mt-2 max-w-md leading-relaxed">
-                Upload PDF, PNG, JPG, or JPEG invoices to initiate real-time key-value extraction, GST portal checksum, and Gemini AI risk assessment.
-              </p>
-
-              {/* Supported Format Chips */}
-              <div className="mt-5 flex items-center gap-2">
-                {['PDF', 'PNG', 'JPG', 'JPEG'].map((fmt) => (
-                  <span key={fmt} className="px-3 py-1 rounded-xl bg-cosmic-900 border border-slate-700/80 text-[10px] font-mono font-bold text-indigo-300">
-                    .{fmt.toLowerCase()}
-                  </span>
+              <div className="flex items-center gap-2 flex-wrap justify-center pt-1">
+                {['PDF', 'PNG', 'JPG', 'JPEG'].map(f => (
+                  <motion.span 
+                    key={f} 
+                    className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-[11px] font-mono font-bold text-indigo-700 dark:text-indigo-300"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    .{f.toLowerCase()}
+                  </motion.span>
                 ))}
-              </div>
-
-              <div className="mt-6">
-                <span className="px-5 py-2.5 rounded-xl bg-cosmic-800 text-slate-200 text-xs font-bold border border-slate-700 hover:bg-cosmic-700 transition-colors shadow-sm inline-block">
-                  Browse Computer
-                </span>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
-      {/* Progress Radar Bar when Analyzing */}
-      {isAnalyzing && (
-        <motion.div 
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="p-5 rounded-2xl bg-cosmic-950 border border-indigo-500/40 space-y-3.5 shadow-glow-indigo"
-        >
-          <div className="flex items-center justify-between text-xs font-bold text-indigo-300">
-            <span className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
-              Neural Anomaly Radar Pipeline Active
-            </span>
-            <span className="font-mono text-indigo-400">
-              {scanStage === 'ocr' ? '33%' : scanStage === 'gst' ? '66%' : '90%'}
-            </span>
-          </div>
-
-          <div className="w-full bg-cosmic-900 rounded-full h-2.5 overflow-hidden">
-            <motion.div 
-              className="bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 h-2.5 rounded-full"
-              initial={{ width: '10%' }}
-              animate={{ 
-                width: scanStage === 'ocr' ? '33%' : scanStage === 'gst' ? '66%' : scanStage === 'ai' ? '90%' : '100%' 
-              }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5 text-[11px] text-center font-bold">
-            <div className={`p-2 rounded-xl border ${scanStage === 'ocr' ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40 shadow-glow-indigo' : 'bg-cosmic-900/40 text-slate-500 border-slate-800'}`}>
-              1. OCR Parsing
+      {/* ── Progress ── */}
+      <AnimatePresence>
+        {scanning && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="glass-card p-6 space-y-4 border border-indigo-200 dark:border-indigo-500/25 bg-indigo-50/80 dark:bg-indigo-600/10 rounded-2xl"
+          >
+            <div className="flex items-center justify-between text-xs font-bold text-indigo-900 dark:text-indigo-200">
+              <span className="flex items-center gap-2 tracking-tight">
+                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+                AI Audit Pipeline Running…
+              </span>
+              <span className="font-mono text-sm text-indigo-700 dark:text-indigo-300">{pct}%</span>
             </div>
-            <div className={`p-2 rounded-xl border ${scanStage === 'gst' ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40 shadow-glow-indigo' : 'bg-cosmic-900/40 text-slate-500 border-slate-800'}`}>
-              2. GST Match Check
-            </div>
-            <div className={`p-2 rounded-xl border ${scanStage === 'ai' ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40 shadow-glow-indigo' : 'bg-cosmic-900/40 text-slate-500 border-slate-800'}`}>
-              3. Gemini AI Rationale
-            </div>
-          </div>
-        </motion.div>
-      )}
 
-      {/* Action Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span>Maximum File Size: 10 MB per document</span>
-        </div>
+            <div className="w-full bg-slate-200 dark:bg-white/[0.05] rounded-full h-2 overflow-hidden border border-indigo-200 dark:border-indigo-500/20">
+              <motion.div
+                className="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 rounded-full"
+                initial={{ width: '0%' }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.6 }}
+              />
+            </div>
 
+            <div className="grid grid-cols-3 gap-3">
+              {STAGES.map(s => (
+                <motion.div
+                  key={s.key}
+                  className={`py-2.5 px-3 rounded-xl text-center text-[11px] font-semibold border transition-all ${
+                    stage === s.key
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm dark:bg-indigo-600/30 dark:border-indigo-500/50'
+                      : (STAGES.findIndex(x => x.key === stage) > STAGES.findIndex(x => x.key === s.key) || stage === 'done')
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30'
+                        : 'bg-white text-slate-400 border-slate-200 dark:bg-white/[0.02] dark:text-gray-500 dark:border-white/[0.05]'
+                  }`}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: STAGES.findIndex(x => x.key === s.key) * 0.05 }}
+                >
+                  {s.label}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Footer ── */}
+      <div className="flex items-center justify-between gap-4 pt-1">
+        <p className="text-[12px] text-slate-500 dark:text-gray-400 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          Max file size 10 MB · Multi-page PDF, PNG, JPG supported
+        </p>
         <Button
           variant="primary"
-          size="lg"
-          disabled={!selectedFile}
-          isLoading={isAnalyzing}
-          onClick={handleSimulateScan}
+          size="md"
           icon={Sparkles}
-          className="w-full sm:w-auto"
+          disabled={!file}
+          isLoading={scanning}
+          onClick={handleAnalyze}
+          className="min-w-[160px]"
         >
-          {isAnalyzing ? "Scanning Anomaly Engine..." : "Analyze Invoice Risk"}
+          {scanning ? 'Analyzing…' : 'Analyze Invoice'}
         </Button>
       </div>
     </div>

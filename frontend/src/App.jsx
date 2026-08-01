@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import UploadPage from './pages/UploadPage';
 import InvoiceDetailsPage from './pages/InvoiceDetailsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   return (
@@ -14,11 +15,15 @@ export default function App() {
         position="top-right" 
         toastOptions={{
           style: {
-            background: '#0f172a',
-            color: '#f8fafc',
-            border: '1px solid #334155',
-            fontSize: '13px'
-          }
+            background: '#111827',
+            color:      '#f9fafb',
+            border:     '1px solid rgba(255,255,255,0.08)',
+            fontSize:   '12px',
+            fontFamily: 'Inter, sans-serif',
+            boxShadow:  '0 8px 32px 0 rgba(0,0,0,0.5)',
+          },
+          success: { iconTheme: { primary: '#10b981', secondary: '#111827' } },
+          error:   { iconTheme: { primary: '#f43f5e', secondary: '#111827' } },
         }}
       />
       <Routes>
@@ -28,6 +33,7 @@ export default function App() {
           <Route path="upload" element={<UploadPage />} />
           <Route path="invoice" element={<InvoiceDetailsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

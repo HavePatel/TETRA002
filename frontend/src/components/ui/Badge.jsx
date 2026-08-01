@@ -1,47 +1,51 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 
-export default function Badge({ level, status, className = "" }) {
-  const value = level || status || "Low Risk";
-  const normalized = String(value).toLowerCase();
+/* Maps a risk/status string to styling tokens */
+function resolve(value) {
+  const v = String(value ?? '').toLowerCase();
 
-  if (normalized.includes('high') || normalized.includes('flagged')) {
-    return (
-      <motion.span 
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30 shadow-glow-rose backdrop-blur-md ${className}`}
-      >
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-        </span>
-        High Risk 🔴
-      </motion.span>
-    );
+  if (v.includes('high') || v.includes('flagged') || v.includes('critical')) {
+    return {
+      dot:   'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse',
+      chip:  'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25',
+      label: 'High Risk',
+      icon:  AlertCircle,
+    };
   }
-
-  if (normalized.includes('medium') || normalized.includes('pending')) {
-    return (
-      <motion.span 
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-sm backdrop-blur-md ${className}`}
-      >
-        <span className="w-2 h-2 rounded-full bg-amber-500" />
-        Medium Risk 🟡
-      </motion.span>
-    );
+  if (v.includes('medium') || v.includes('pending') || v.includes('review')) {
+    return {
+      dot:   'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]',
+      chip:  'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/25',
+      label: 'Medium Risk',
+      icon:  AlertTriangle,
+    };
   }
+  // Low / Verified / default
+  return {
+    dot:   'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]',
+    chip:  'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25',
+    label: 'Low Risk',
+    icon:  CheckCircle2,
+  };
+}
+
+export default function Badge({ level, status, label, className = '' }) {
+  const raw  = level || status || label || '';
+  const info = resolve(raw);
+  const Icon = info.icon;
 
   return (
-    <motion.span 
+    <motion.span
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-glow-emerald backdrop-blur-md ${className}`}
+      transition={{ duration: 0.2 }}
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border tracking-tight backdrop-blur-md transition-colors ${info.chip} ${className}`}
     >
-      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-      Low Risk 🟢
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${info.dot}`} />
+      <Icon className="w-3.5 h-3.5 opacity-90 shrink-0" />
+      <span>{label || info.label}</span>
     </motion.span>
   );
 }
