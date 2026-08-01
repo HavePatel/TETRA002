@@ -38,12 +38,6 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         }
     )
 
-@app.get("/", tags=["General"])
-async def read_root() -> dict:
-    """Root endpoint to check if the AI Service is running."""
-    logger.info("Accessing root endpoint")
-    return {"message": "AI Service is running"}
-
 @app.get("/health", tags=["General"])
 async def health_check() -> dict:
     """Health check endpoint to verify the service status."""

@@ -91,3 +91,57 @@ def test_singleton_engine_reused() -> None:
     engine2 = extractor2._get_ocr_engine()
     
     assert engine1 is engine2
+
+def test_engine_initializes_exactly_once() -> None:
+    """Test that the PaddleOCR constructor is called exactly once across multiple OCRExtractor calls."""
+    from unittest.mock import patch
+    
+    # Save original instance
+    orig_instance = OCRExtractor._ocr_instance
+    OCRExtractor._ocr_instance = None
+    
+    try:
+        with patch("paddleocr.PaddleOCR") as mock_paddleocr:
+            extractor1 = OCRExtractor()
+            extractor2 = OCRExtractor()
+            
+            extractor1._get_ocr_engine()
+            extractor2._get_ocr_engine()
+            
+            mock_paddleocr.assert_called_once()
+    finally:
+        # Restore original instance
+        OCRExtractor._ocr_instance = orig_instance
+
+def test_singleton_thread_safety() -> None:
+    """Test that concurrent calls to _get_ocr_engine are thread-safe and initialize the engine once."""
+    import threading
+    
+    # Save original instance
+    orig_instance = OCRExtractor._ocr_instance
+    OCRExtractor._ocr_instance = None
+    
+    engines = []
+    threads = []
+    
+    def get_engine_thread():
+        engine = OCRExtractor._get_ocr_engine()
+        engines.append(engine)
+        
+    try:
+        # Start multiple threads to retrieve engine concurrently
+        for _ in range(5):
+            t = threading.Thread(target=get_engine_thread)
+            threads.append(t)
+            t.start()
+            
+        for t in threads:
+            t.join()
+            
+        # Assert all threads got the exact same engine instance
+        assert len(engines) == 5
+        for eng in engines:
+            assert eng is engines[0]
+    finally:
+        # Restore original instance
+        OCRExtractor._ocr_instance = orig_instance

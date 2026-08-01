@@ -3,11 +3,7 @@ from main import app
 
 client = TestClient(app)
 
-def test_root_endpoint() -> None:
-    """Test the root GET / endpoint."""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json() == {"message": "AI Service is running"}
+
 
 def test_health_endpoint() -> None:
     """Test the health GET /health endpoint."""
