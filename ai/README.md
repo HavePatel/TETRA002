@@ -78,9 +78,23 @@ ai/
 
 4. Run the FastAPI application:
    ```bash
-   python -m api.app
+   python -m uvicorn main:app --reload
    ```
-   The server will be running on `http://localhost:8000`. You can access the API docs at `http://localhost:8000/docs`.
+
+## Development Ports
+
+Backend:
+http://localhost:8000
+
+AI Service:
+http://localhost:8001
+
+Extraction Endpoint:
+
+POST http://localhost:8001/api/v1/extract
+
+API documentation:
+http://localhost:8001/docs
 
 ## Planned Pipeline
 
