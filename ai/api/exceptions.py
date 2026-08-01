@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import HTTPException
+from fastapi.exceptions import HTTPException, RequestValidationError
 from ocr.extractor import (
     InvoiceFileNotFoundError,
     UnsupportedFormatError,
@@ -18,6 +18,20 @@ from utils.logger import logger
 def register_exception_handlers(app: FastAPI) -> None:
     """Register global exception handlers for the FastAPI app."""
     
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        logger.error(f"RequestValidationError on {request.method} {request.url.path}: {exc}")
+        errors = []
+        for err in exc.errors():
+            loc = " -> ".join(str(l) for l in err.get("loc", []))
+            msg = err.get("msg", "invalid value")
+            errors.append(f"{loc}: {msg}")
+        message = "Validation failed: " + "; ".join(errors)
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": {"message": message}}
+        )
+
     @app.exception_handler(InvoiceFileNotFoundError)
     async def file_not_found_handler(request: Request, exc: InvoiceFileNotFoundError):
         logger.error(f"FileNotFoundError on {request.method} {request.url.path}: {exc}")

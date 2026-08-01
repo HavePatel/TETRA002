@@ -1,5 +1,6 @@
+import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 class InvoiceExtractionSchema(BaseModel):
     """Pydantic schema representing structured invoice data."""
@@ -10,4 +11,15 @@ class InvoiceExtractionSchema(BaseModel):
     subtotal: Optional[float] = Field(default=None, description="The total taxable value/subtotal amount of the invoice before tax.")
     gst: Optional[float] = Field(default=None, description="The GST/tax amount.")
     total: Optional[float] = Field(default=None, description="The total/gross amount of the invoice including tax.")
-    currency: Optional[str] = Field(default="INR", description="The currency code of the invoice amount (e.g., INR, USD).")
+    currency: Optional[str] = Field(default=None, description="The currency code of the invoice amount (e.g., INR, USD).")
+
+    @field_validator("invoice_date")
+    @classmethod
+    def validate_invoice_date(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        try:
+            datetime.date.fromisoformat(v)
+        except ValueError:
+            raise ValueError("invoice_date must be in YYYY-MM-DD format and be a valid date.")
+        return v

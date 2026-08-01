@@ -49,7 +49,7 @@ def test_missing_fields_defaults():
         assert result.subtotal is None
         assert result.gst is None
         assert result.total is None
-        assert result.currency == "INR"
+        assert result.currency is None
 
 def test_retry_mechanism_success():
     """Test that a malformed JSON on first attempt triggers exactly one retry and succeeds on second attempt."""
@@ -97,4 +97,16 @@ def test_api_error():
     
     with patch.object(GeminiExtractor, '_get_client', return_value=mock_client):
         with pytest.raises(GeminiAPIError):
+            extract_invoice_data("dummy ocr text")
+
+def test_invalid_date_format_throws_schema_error():
+    """Test that an invalid date format (non-ISO) raises InvalidSchemaError."""
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    # Invalid date format
+    mock_response.text = '{"invoice_number": "INV-100", "vendor": "Acme Corp", "invoice_date": "August 1, 2026"}'
+    mock_client.models.generate_content.return_value = mock_response
+    
+    with patch.object(GeminiExtractor, '_get_client', return_value=mock_client):
+        with pytest.raises(InvalidSchemaError):
             extract_invoice_data("dummy ocr text")

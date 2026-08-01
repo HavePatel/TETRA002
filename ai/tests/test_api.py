@@ -98,3 +98,12 @@ def test_extract_api_unexpected_failure():
         json_data = response.json()
         assert json_data["success"] is False
         assert json_data["error"]["message"] == "Unexpected error"
+
+def test_extract_api_request_validation_failure():
+    """Test that a request missing the 'file' parameter returns 400 with the custom error structure."""
+    response = client.post("/api/v1/extract")
+    
+    assert response.status_code == 400
+    json_data = response.json()
+    assert json_data["success"] is False
+    assert "Validation failed" in json_data["error"]["message"]
