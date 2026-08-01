@@ -5,9 +5,11 @@ __pycache__/
 *.pyd
 *.so
 
-# Virtual Environment
-venv/
-.env
+# Backend
+backend/venv/
+backend/.env
+backend/uploads/
+backend/reports/
 
 # Node
 node_modules/
