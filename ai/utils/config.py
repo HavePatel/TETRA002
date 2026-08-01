@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     
     GEMINI_API_KEY: str = ""
     ENABLE_MKLDNN: bool = True
+    MAX_UPLOAD_SIZE_MB: int = 10
+    TEMP_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "temp")
     
     model_config = SettingsConfigDict(
         env_file=".env",

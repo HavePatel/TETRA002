@@ -24,7 +24,7 @@ class InvalidJSONError(ExtractionError):
 class GeminiExtractor:
     """Gemini-based information extractor for converting invoice text to structured schemas."""
     
-    GEMINI_MODEL = "gemini-2.5-flash"
+    GEMINI_MODEL = "gemini-flash-latest"
     _client_instance = None
 
     def __init__(self) -> None:

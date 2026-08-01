@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from utils.config import settings
 from utils.logger import logger
+from api.routes import router as api_router
+from api.exceptions import register_exception_handlers
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -11,6 +13,13 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json"
 )
+
+# Register custom API exception handlers
+register_exception_handlers(app)
+
+# Include extraction API routes
+app.include_router(api_router)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:

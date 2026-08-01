@@ -1,1 +1,1 @@
-from .extraction_service import extract_invoice_data
+from .extraction_service import extract_invoice_data, process_invoice
