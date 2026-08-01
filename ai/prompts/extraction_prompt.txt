@@ -1,0 +1,23 @@
+You are an expert invoice parser. Your task is to extract structured invoice data from the following raw OCR text.
+
+Input OCR Text:
+{ocr_text}
+
+You must output ONLY a valid JSON object matching the following schema structure:
+{{
+  "invoice_number": "",
+  "vendor": "",
+  "gstin": "",
+  "invoice_date": "",
+  "subtotal": 0,
+  "gst": 0,
+  "total": 0,
+  "currency": "INR"
+}}
+
+Rules:
+1. Return ONLY valid raw JSON. Do NOT wrap the response in markdown code fences (like ```json ... ```) or add any pre-amble/post-amble text.
+2. If a field is missing, use its default value (empty string for text fields, 0 for numeric fields, and "INR" for currency).
+3. Keep currency as "INR" unless a different currency is explicitly present in the document.
+4. Use ISO format (YYYY-MM-DD) for dates if possible.
+5. Do NOT invent/fabricate values. If a field is not present or cannot be determined, use its default value.
