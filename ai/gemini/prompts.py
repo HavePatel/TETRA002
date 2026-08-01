@@ -1,0 +1,1 @@
+"""Gemini prompt configurations module."""
