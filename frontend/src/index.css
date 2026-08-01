@@ -2,69 +2,166 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   PREMIUM ENTERPRISE SAAS DESIGN SYSTEM — InvoiceGuard AI
+   Inspired by Stripe, Linear, Vercel & Microsoft Fabric
+   Supports Dark (Default) & Light Mode with CSS Variables
+   ============================================================ */
+
 @layer base {
+  :root {
+    --bg-canvas:     #f8fafc;
+    --bg-panel:      rgba(255, 255, 255, 0.95);
+    --bg-card:       #ffffff;
+    --bg-surface:    #f1f5f9;
+    --bg-elevated:   #e2e8f0;
+    --border:        #e2e8f0;
+    --border-hover:  rgba(99, 102, 241, 0.4);
+    --text-primary:  #0f172a;
+    --text-secondary:#334155;
+    --text-muted:    #64748b;
+    --text-subtle:   #94a3b8;
+  }
+
+  .dark {
+    --bg-canvas:     #070a12;
+    --bg-panel:      rgba(14, 19, 32, 0.9);
+    --bg-card:       #151b2d;
+    --bg-surface:    #1d2540;
+    --bg-elevated:   #252f4c;
+    --border:        rgba(255, 255, 255, 0.08);
+    --border-hover:  rgba(99, 102, 241, 0.45);
+    --text-primary:  #f8fafc;
+    --text-secondary:#cbd5e1;
+    --text-muted:    #94a3b8;
+    --text-subtle:   #64748b;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    background-color: #030712;
-    color: #f8fafc;
-    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     overflow-x: hidden;
+    letter-spacing: -0.013em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  ::selection {
+    background: rgba(99, 102, 241, 0.35);
+    color: #fff;
+  }
+
+  /* ── Strict Focus Reset — keyboard-only accessible ring ── */
+  *:focus {
+    outline: none !important;
+    box-shadow: none;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.6) !important;
+    outline-offset: 2px;
+    border-radius: inherit;
   }
 }
 
-/* Custom Scrollbar */
+/* ── Scrollbar Styling ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #030712;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
-
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  background-clip: padding-box;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: rgba(99, 102, 241, 0.5);
+  background-clip: padding-box;
 }
 
-/* Cyber Grid Background */
-.bg-cyber-pattern {
-  background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+/* ── Enterprise Glassmorphism & Depth System ── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1.25rem;
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.04),
+    0 10px 24px -6px rgba(0, 0, 0, 0.03);
+  transition: 
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    background-color 0.2s ease;
+  will-change: transform;
 }
 
-/* Glassmorphism Panels */
-.glass-panel {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(9, 13, 22, 0.85) 100%);
+.dark .glass-card {
+  background: rgba(21, 27, 45, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.4),
+    0 12px 32px -8px rgba(0, 0, 0, 0.5);
 }
 
-.glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.glass-card:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 
+    0 4px 12px 0 rgba(0, 0, 0, 0.05),
+    0 16px 36px -8px rgba(99, 102, 241, 0.12);
 }
 
-.glass-card-hover:hover {
+.dark .glass-card:hover {
   border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.25);
-  transform: translateY(-2px);
+  background: rgba(21, 27, 45, 0.85);
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.4),
+    0 16px 48px -12px rgba(99, 102, 241, 0.2);
 }
 
-/* Metallic Text Gradient */
-.text-metallic {
-  background: linear-gradient(180deg, #FFFFFF 0%, #94A3B8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Glass panel (Sidebar, Navbar) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(226, 232, 240, 0.9);
 }
 
-.text-ai-gradient {
-  background: linear-gradient(135deg, #c084fc 0%, #6366f1 50%, #38bdf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.dark .glass-panel {
+  background: rgba(14, 19, 32, 0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Table Row Hover ── */
+.table-row-hover {
+  transition: background-color 0.15s ease;
+}
+.table-row-hover:hover {
+  background-color: rgba(99, 102, 241, 0.04);
+}
+.dark .table-row-hover:hover {
+  background-color: rgba(99, 102, 241, 0.08);
 }
