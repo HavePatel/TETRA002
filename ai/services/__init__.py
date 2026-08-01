@@ -1,1 +1,1 @@
-# Services package
+from .extraction_service import extract_invoice_data
