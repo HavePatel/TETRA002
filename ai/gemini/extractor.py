@@ -1,5 +1,6 @@
 import os
 import time
+import threading
 from typing import Optional
 from utils.logger import logger
 from schemas.extract import InvoiceExtractionSchema
@@ -26,6 +27,7 @@ class GeminiExtractor:
     
     GEMINI_MODEL = "gemini-flash-latest"
     _client_instance = None
+    _lock = threading.Lock()
 
     def __init__(self) -> None:
         """Initialize GeminiExtractor."""
@@ -33,18 +35,20 @@ class GeminiExtractor:
 
     @classmethod
     def _get_client(cls):
-        """Lazily initialize and return the single genai.Client instance."""
+        """Lazily initialize and return the single genai.Client instance thread-safely."""
         if cls._client_instance is None:
-            logger.info("Initializing Gemini GenAI client singleton...")
-            try:
-                from google import genai
-                from utils.config import settings
-                
-                api_key = settings.GEMINI_API_KEY
-                cls._client_instance = genai.Client(api_key=api_key)
-            except Exception as e:
-                logger.error(f"Failed to initialize Gemini Client: {e}")
-                raise GeminiAPIError(f"Failed to initialize Gemini Client: {e}")
+            with cls._lock:
+                if cls._client_instance is None:
+                    logger.info("Initializing Gemini GenAI client singleton...")
+                    try:
+                        from google import genai
+                        from utils.config import settings
+                        
+                        api_key = settings.GEMINI_API_KEY
+                        cls._client_instance = genai.Client(api_key=api_key)
+                    except Exception as e:
+                        logger.error(f"Failed to initialize Gemini Client: {e}")
+                        raise GeminiAPIError(f"Failed to initialize Gemini Client: {e}")
         return cls._client_instance
 
     def _call_gemini(self, client, prompt: str) -> str:
@@ -153,13 +157,15 @@ class GeminiExtractor:
                 logger.warning(f"Extraction failure (attempt {attempt}/{max_attempts}): {e}")
                 last_error = e
                 if attempt < max_attempts:
-                    logger.info("Retrying extraction...")
+                    logger.info("Retrying extraction in 1 second...")
+                    time.sleep(1)
                     continue
             except GeminiAPIError as e:
                 logger.error(f"Gemini API request error (attempt {attempt}/{max_attempts}): {e}")
                 last_error = e
                 if attempt < max_attempts:
-                    logger.info("Retrying extraction after API error...")
+                    logger.info("Retrying extraction after API error in 1 second...")
+                    time.sleep(1)
                     continue
                     
         # Failed after all attempts
