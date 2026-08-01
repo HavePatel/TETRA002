@@ -28,14 +28,10 @@ def process_invoice(file_path: str) -> InvoiceExtractionSchema:
         InvoiceExtractionSchema: Validated structured invoice schema.
     """
     # 1. OCR Engine
-    logger.info("OCR started")
     ocr_extractor = OCRExtractor()
     ocr_text = ocr_extractor.extract_text(file_path)
-    logger.info("OCR completed")
     
     # 2. Gemini Extraction
-    logger.info("Gemini started")
     extracted_data = extract_invoice_data(ocr_text)
-    logger.info("Gemini completed")
     
     return extracted_data

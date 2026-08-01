@@ -30,7 +30,7 @@ def test_valid_ocr_extraction():
         mock_client.models.generate_content.assert_called_once()
 
 def test_missing_fields_defaults():
-    """Test response with missing fields defaults to empty/0 values correctly."""
+    """Test response with missing fields defaults to None correctly."""
     mock_client = MagicMock()
     mock_response = MagicMock()
     # Missing subtotal, gst, total, currency
@@ -44,9 +44,11 @@ def test_missing_fields_defaults():
         assert result.invoice_number == "INV-200"
         assert result.vendor == "Acme Corp"
         # Defaults check
-        assert result.subtotal == 0.0
-        assert result.gst == 0.0
-        assert result.total == 0.0
+        assert result.gstin is None
+        assert result.invoice_date is None
+        assert result.subtotal is None
+        assert result.gst is None
+        assert result.total is None
         assert result.currency == "INR"
 
 def test_retry_mechanism_success():
