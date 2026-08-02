@@ -38,9 +38,9 @@ export default function UploadPage() {
   const navigate  = useNavigate();
   const [done, setDone] = useState(false);
 
-  const handleSuccess = (_file) => {
+  const handleSuccess = (invoiceId) => {
     setDone(true);
-    setTimeout(() => navigate('/invoice?id=INV_001'), 2000);
+    setTimeout(() => navigate(`/invoice?id=${invoiceId || 'INV_001'}`), 2000);
   };
 
   return (

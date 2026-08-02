@@ -30,19 +30,54 @@ export default function UploadBox({ onUploadSuccess }) {
     maxSize: 10 * 1024 * 1024,
   });
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!file) { toast.error('Please select an invoice document first.'); return; }
     setScanning(true);
     setStage('ocr');
     toast.loading('Stage 1 / 3 — PaddleOCR extraction…', { id: 'scan' });
 
-    setTimeout(() => { setStage('gst'); toast.loading('Stage 2 / 3 — GSTIN validation…', { id: 'scan' }); }, 1100);
-    setTimeout(() => { setStage('ai');  toast.loading('Stage 3 / 3 — Gemini AI scoring…', { id: 'scan' }); }, 2200);
-    setTimeout(() => {
-      setScanning(false); setStage('done');
+    // Start backend request
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadPromise = fetch('http://localhost:8000/upload', {
+      method: 'POST',
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to upload invoice');
+      }
+      return res.json();
+    });
+
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    try {
+      await delay(1100);
+      setStage('gst');
+      toast.loading('Stage 2 / 3 — GSTIN validation…', { id: 'scan' });
+
+      await delay(1100);
+      setStage('ai');
+      toast.loading('Stage 3 / 3 — Gemini AI scoring…', { id: 'scan' });
+
+      // Wait for both the minimum animation duration (additional 1.2s to reach 3.4s)
+      // and the backend upload request response.
+      const [_, result] = await Promise.all([
+        delay(1200),
+        uploadPromise,
+      ]);
+
+      setScanning(false);
+      setStage('done');
       toast.success('Analysis complete!', { id: 'scan' });
-      onUploadSuccess?.(file);
-    }, 3400);
+      onUploadSuccess?.(result.invoice?.invoice_id);
+    } catch (error) {
+      setScanning(false);
+      setStage(null);
+      toast.error(error.message || 'Error processing invoice', { id: 'scan' });
+    }
   };
 
   const pct = STAGES.find(s => s.key === stage)?.pct ?? (stage === 'done' ? 100 : 0);

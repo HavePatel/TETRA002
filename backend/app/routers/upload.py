@@ -22,11 +22,16 @@ async def upload_invoice(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    # Validate PDF file
-    if file.content_type != "application/pdf":
+    # Validate allowed file types
+    allowed_content_types = {
+        "application/pdf",
+        "image/png",
+        "image/jpeg"
+    }
+    if file.content_type not in allowed_content_types:
         raise HTTPException(
             status_code=400,
-            detail="Only PDF files are allowed."
+            detail="Only PDF, PNG, and JPG/JPEG files are allowed."
         )
 
     # Create invoice record
@@ -41,8 +46,25 @@ async def upload_invoice(
     # Generate business invoice ID
     invoice.invoice_id = f"INV_{invoice.id:03d}"
 
-    # Save uploaded PDF
-    file_name = f"{invoice.invoice_id}.pdf"
+    # Map MIME type to standard extension
+    MIME_TO_EXTENSION = {
+        "application/pdf": ".pdf",
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+    }
+
+    # Extract extension from original filename if valid, otherwise fallback
+    ext = ""
+    if file.filename:
+        file_ext = Path(file.filename).suffix.lower()
+        if file_ext in [".pdf", ".png", ".jpg", ".jpeg"]:
+            ext = file_ext
+
+    if not ext:
+        ext = MIME_TO_EXTENSION.get(file.content_type, ".pdf")
+
+    # Save uploaded file
+    file_name = f"{invoice.invoice_id}{ext}"
     file_path = UPLOAD_DIR / file_name
 
     with file_path.open("wb") as buffer:
@@ -120,6 +142,41 @@ async def upload_invoice(
             "invoice_number": invoice.invoice_number,
             "vendor": invoice.vendor,
             "gstin": invoice.gstin,
+            "status": invoice.status
+        },
+        "validation": validation_report,
+        "risk": risk_report
+    }
+
+
+@router.get("/invoice/{invoice_id}")
+def get_invoice(invoice_id: str, db: Session = Depends(get_db)):
+    invoice = (
+        db.query(Invoice)
+        .filter(Invoice.invoice_id == invoice_id)
+        .first()
+    )
+
+    if not invoice:
+        raise HTTPException(
+            status_code=404,
+            detail="Invoice not found"
+        )
+
+    validation_report = validate_invoice(db, invoice)
+    risk_report = calculate_risk(validation_report)
+
+    return {
+        "invoice": {
+            "invoice_id": invoice.invoice_id,
+            "invoice_number": invoice.invoice_number,
+            "vendor": invoice.vendor,
+            "gstin": invoice.gstin,
+            "invoice_date": invoice.invoice_date,
+            "subtotal": invoice.subtotal,
+            "gst": invoice.gst,
+            "total": invoice.total,
+            "currency": invoice.currency or "INR",
             "status": invoice.status
         },
         "validation": validation_report,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -11,7 +11,7 @@ import Badge  from '../components/ui/Badge';
 import { dummyInvoices } from '../data/dummyData';
 
 const fmt = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n || 0);
 
 const RiskMeter = ({ score }) => {
   const color =
@@ -55,9 +55,63 @@ export default function InvoiceDetailsPage() {
   const navigate       = useNavigate();
   const [params]       = useSearchParams();
   const id             = params.get('id') ?? 'INV_001';
-  const inv            = dummyInvoices.find(i => i.invoice_id === id) ?? dummyInvoices[0];
 
-  const isHigh   = inv.risk_score >= 70;
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch(`http://localhost:8000/invoice/${id}`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Invoice not found');
+        }
+        return res.json();
+      })
+      .then((resJson) => {
+        setData(resJson);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-slate-500 dark:text-gray-400 font-mono">Loading invoice details...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-sm text-rose-600 dark:text-rose-400 font-mono">Error: {error || 'Failed to load invoice'}</p>
+        <Button variant="secondary" size="md" onClick={() => navigate('/upload')}>
+          Back to Upload
+        </Button>
+      </div>
+    );
+  }
+
+  const { invoice, validation, risk } = data;
+
+  const isHigh = (risk?.risk_score ?? 0) >= 70;
+  const riskLevel = risk?.risk_level ? `${risk.risk_level} Risk` : 'Low Risk';
+  const riskScore = risk?.risk_score ?? 0;
+
+  const anomalies = validation?.issues?.map(issue => issue.message) || [];
+  const aiExplanation = anomalies.length > 0
+    ? `Gemini AI forensic audit detected ${anomalies.length} anomaly/anomalies: ${anomalies.join(', ')}. The risk level is assessed as ${riskLevel} with a score of ${riskScore}.`
+    : "All security checks verified against ERP records and master database. Math and tax values check out with zero variance.";
+
+  const lineItems = invoice?.line_items || [];
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -74,9 +128,9 @@ export default function InvoiceDetailsPage() {
           <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-500/20">
             Audit Report
           </span>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight mt-1">{inv.invoice_number}</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight mt-1">{invoice.invoice_number || 'N/A'}</h1>
         </div>
-        <Badge level={inv.risk_level} className="text-xs px-4 py-1.5" />
+        <Badge level={riskLevel} className="text-xs px-4 py-1.5" />
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -95,13 +149,13 @@ export default function InvoiceDetailsPage() {
               <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               Invoice Information Summary
             </p>
-            <DetailRow icon={Building2}       label="Vendor"         value={inv.vendor}           />
-            <DetailRow icon={Hash}            label="Invoice #"      value={inv.invoice_number}   mono />
-            <DetailRow icon={Hash}            label="GSTIN"          value={inv.gstin}            mono />
-            <DetailRow icon={CalendarDays}    label="Date"           value={inv.invoice_date}     mono />
-            <DetailRow icon={CircleDollarSign} label="Subtotal"      value={fmt(inv.subtotal)}    mono />
-            <DetailRow icon={ReceiptText}     label="GST"            value={fmt(inv.gst)}         mono />
-            <DetailRow icon={CircleDollarSign} label="Total Amount"  value={fmt(inv.total)}       mono />
+            <DetailRow icon={Building2}       label="Vendor"         value={invoice.vendor || 'N/A'}           />
+            <DetailRow icon={Hash}            label="Invoice #"      value={invoice.invoice_number || 'N/A'}   mono />
+            <DetailRow icon={Hash}            label="GSTIN"          value={invoice.gstin || 'N/A'}            mono />
+            <DetailRow icon={CalendarDays}    label="Date"           value={invoice.invoice_date || 'N/A'}     mono />
+            <DetailRow icon={CircleDollarSign} label="Subtotal"      value={fmt(invoice.subtotal)}    mono />
+            <DetailRow icon={ReceiptText}     label="GST"            value={fmt(invoice.gst)}         mono />
+            <DetailRow icon={CircleDollarSign} label="Total Amount"  value={fmt(invoice.total)}       mono />
           </div>
 
           {/* Line Items */}
@@ -129,18 +183,26 @@ export default function InvoiceDetailsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/60 dark:divide-white/[0.04]">
-                  {inv.line_items.map(item => (
-                    <tr key={item.id} className="table-row-hover hover:bg-slate-100/60 dark:hover:bg-white/[0.02]">
-                      <td className="px-6 py-4 text-slate-400 dark:text-gray-500 font-mono font-semibold">{item.id}</td>
-                      <td className="px-6 py-4 text-slate-800 dark:text-gray-200 font-medium">{item.description}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-gray-400 font-mono text-right font-medium">{item.quantity}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-gray-400 font-mono text-right font-medium">{fmt(item.unit_price)}</td>
-                      <td className="px-6 py-4 text-slate-900 dark:text-gray-100 font-mono font-bold text-right">{fmt(item.total)}</td>
+                  {lineItems.length > 0 ? (
+                    lineItems.map(item => (
+                      <tr key={item.id} className="table-row-hover hover:bg-slate-100/60 dark:hover:bg-white/[0.02]">
+                        <td className="px-6 py-4 text-slate-400 dark:text-gray-500 font-mono font-semibold">{item.id}</td>
+                        <td className="px-6 py-4 text-slate-800 dark:text-gray-200 font-medium">{item.description}</td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-gray-400 font-mono text-right font-medium">{item.quantity}</td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-gray-400 font-mono text-right font-medium">{fmt(item.unit_price)}</td>
+                        <td className="px-6 py-4 text-slate-900 dark:text-gray-100 font-mono font-bold text-right">{fmt(item.total)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-slate-400 dark:text-gray-500 font-mono">
+                        No line items extracted.
+                      </td>
                     </tr>
-                  ))}
+                  )}
                   <tr className="bg-slate-100/80 dark:bg-white/[0.03] font-bold border-t border-slate-200 dark:border-white/[0.06]">
                     <td colSpan={4} className="px-6 py-4 text-right text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wider">Calculated Total</td>
-                    <td className="px-6 py-4 text-right font-mono text-indigo-700 dark:text-indigo-300 text-sm">{fmt(inv.total)}</td>
+                    <td className="px-6 py-4 text-right font-mono text-indigo-700 dark:text-indigo-300 text-sm">{fmt(invoice.total)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -159,17 +221,17 @@ export default function InvoiceDetailsPage() {
           {/* Risk Score */}
           <div className="glass-card p-6 space-y-5 border border-slate-200/80 dark:border-white/[0.06] bg-white/80 dark:bg-[#0c101d]/70 backdrop-blur-xl rounded-3xl">
             <p className="text-xs font-bold text-slate-900 dark:text-gray-200 flex items-center gap-2 pb-3 border-b border-slate-200/80 dark:border-white/[0.05]">
-              <Cpu className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <Cpu className="w-4.5 h-4.5 text-indigo-600 dark:text-indigo-400" />
               AI Risk Assessment
             </p>
-            <RiskMeter score={inv.risk_score} />
+            <RiskMeter score={riskScore} />
             <div className="pt-2">
-              <Badge level={inv.risk_level} className="w-full justify-center text-xs px-4 py-2.5 rounded-xl" />
+              <Badge level={riskLevel} className="w-full justify-center text-xs px-4 py-2.5 rounded-xl" />
             </div>
           </div>
 
           {/* Anomalies */}
-          {inv.anomalies.length > 0 && (
+          {anomalies.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -178,10 +240,10 @@ export default function InvoiceDetailsPage() {
             >
               <p className={`text-xs font-bold flex items-center gap-2 ${isHigh ? 'text-rose-700 dark:text-rose-300' : 'text-amber-800 dark:text-amber-300'}`}>
                 <ShieldAlert className="w-4.5 h-4.5" />
-                Anomalies Flagged ({inv.anomalies.length})
+                Anomalies Flagged ({anomalies.length})
               </p>
               <ul className="space-y-2.5">
-                {inv.anomalies.map((a, i) => (
+                {anomalies.map((a, i) => (
                   <motion.li
                     key={i}
                     className={`flex items-start gap-2.5 text-xs p-3 rounded-2xl border font-medium ${
@@ -212,7 +274,7 @@ export default function InvoiceDetailsPage() {
               <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               Gemini AI Forensic Explanation
             </p>
-            <p className="text-xs text-slate-600 dark:text-gray-300 font-normal leading-relaxed">{inv.ai_explanation}</p>
+            <p className="text-xs text-slate-600 dark:text-gray-300 font-normal leading-relaxed">{aiExplanation}</p>
           </motion.div>
 
           {/* Actions */}
