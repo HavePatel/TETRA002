@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.database.database import Base, engine
 from app.models import invoice
-from app.routers import upload, extract, validate
+from app.routers import upload, extract, validate, risk
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,6 +16,7 @@ app = FastAPI(
 app.include_router(upload.router, tags=["Upload"])
 app.include_router(extract.router, tags=["Extraction"])
 app.include_router(validate.router, tags=["Validation"])
+app.include_router(risk.router)
 
 
 @app.get("/")
