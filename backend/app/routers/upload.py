@@ -3,9 +3,13 @@ import shutil
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
+import requests
 
 from app.database.dependencies import get_db
 from app.models.invoice import Invoice
+from app.services.ai_service import extract_invoice
+from app.services.validation_service import validate_invoice
+from app.services.risk_service import calculate_risk
 
 router = APIRouter()
 
@@ -25,7 +29,7 @@ async def upload_invoice(
             detail="Only PDF files are allowed."
         )
 
-    # Create invoice record first
+    # Create invoice record
     invoice = Invoice(
         status="Uploaded"
     )
@@ -34,7 +38,7 @@ async def upload_invoice(
     db.commit()
     db.refresh(invoice)
 
-    # Generate sequential business ID
+    # Generate business invoice ID
     invoice.invoice_id = f"INV_{invoice.id:03d}"
 
     # Save uploaded PDF
@@ -44,15 +48,80 @@ async def upload_invoice(
     with file_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Update database
     invoice.pdf_path = str(file_path)
 
     db.commit()
     db.refresh(invoice)
 
+    # -----------------------------
+    # AI Extraction
+    # -----------------------------
+    try:
+        ai_response = extract_invoice(str(file_path))
+
+        if not ai_response.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=ai_response.get(
+                    "error",
+                    {}
+                ).get(
+                    "message",
+                    "AI extraction failed."
+                )
+            )
+
+        data = ai_response["data"]
+
+    except requests.exceptions.RequestException:
+        raise HTTPException(
+            status_code=503,
+            detail="AI extraction service is unavailable."
+        )
+
+    # -----------------------------
+    # Save extracted fields
+    # -----------------------------
+    invoice.invoice_number = data.get("invoice_number")
+    invoice.vendor = data.get("vendor")
+    invoice.gstin = data.get("gstin")
+    invoice.invoice_date = data.get("invoice_date")
+    invoice.subtotal = data.get("subtotal")
+    invoice.gst = data.get("gst")
+    invoice.total = data.get("total")
+
+    invoice.status = "Extracted"
+
+    db.commit()
+    db.refresh(invoice)
+
+    # -----------------------------
+    # Validation
+    # -----------------------------
+    validation_report = validate_invoice(
+        db,
+        invoice
+    )
+
+    # -----------------------------
+    # Risk Scoring
+    # -----------------------------
+    risk_report = calculate_risk(
+        validation_report
+    )
+
+    # -----------------------------
+    # Final Response
+    # -----------------------------
     return {
-        "message": "Invoice uploaded successfully",
-        "invoice_id": invoice.invoice_id,
-        "file_name": file_name,
-        "status": invoice.status
+        "message": "Invoice processed successfully",
+        "invoice": {
+            "invoice_id": invoice.invoice_id,
+            "invoice_number": invoice.invoice_number,
+            "vendor": invoice.vendor,
+            "gstin": invoice.gstin,
+            "status": invoice.status
+        },
+        "validation": validation_report,
+        "risk": risk_report
     }
