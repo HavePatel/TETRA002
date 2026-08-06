@@ -56,6 +56,14 @@ Our solution automates the entire workflow, reducing manual effort while improvi
 - ✅ AI Explanation
 - ✅ Interactive Dashboard
 
+## Screenshots
+<img width="1919" height="1199" alt="image" src="https://github.com/user-attachments/assets/d759eaba-434e-4bef-9245-80f7f2f8f38f" />
+<img width="1905" height="982" alt="image" src="https://github.com/user-attachments/assets/aaf249c0-106c-4436-9422-69dba6ba2e31" />
+<img width="1919" height="1199" alt="image" src="https://github.com/user-attachments/assets/d0afb460-66ba-47c7-bc57-c5c67024a53e" />
+<img width="1919" height="1199" alt="image" src="https://github.com/user-attachments/assets/98d661b9-c2d9-4361-91e4-372e488a43cc" />
+
+  
+
 ### Advanced Features
 
 - 📥 PDF Audit Report
