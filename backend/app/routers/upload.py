@@ -95,10 +95,25 @@ async def upload_invoice(
 
         data = ai_response["data"]
 
-    except requests.exceptions.RequestException:
+    except requests.exceptions.HTTPError as e:
+        try:
+            error_json = e.response.json()
+            error_message = error_json.get("error", {}).get("message", "AI extraction service encountered an error.")
+        except Exception:
+            error_message = f"AI Service error: {e.response.text}"
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=error_message
+        )
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
         raise HTTPException(
             status_code=503,
-            detail="AI extraction service is unavailable."
+            detail="AI extraction service is offline or unavailable."
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI extraction request failed: {str(e)}"
         )
 
     # -----------------------------

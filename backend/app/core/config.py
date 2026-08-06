@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./invoice_scanner.db"
 
     GEMINI_API_KEY: str = ""
+    AI_SERVICE_URL: str = "http://localhost:8001/api/v1/extract"
 
     model_config = SettingsConfigDict(
         env_file=".env",

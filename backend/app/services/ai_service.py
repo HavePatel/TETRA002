@@ -1,6 +1,7 @@
 import requests
+from app.core.config import settings
 
-AI_SERVICE_URL = "http://localhost:8001/api/v1/extract"
+AI_SERVICE_URL = settings.AI_SERVICE_URL
 
 
 def extract_invoice(file_path: str):
